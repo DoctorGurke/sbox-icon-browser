@@ -1,0 +1,6 @@
+.vs/*
+code/obj/*
+code/Properties/*
+
+# sbox generates this
+*.csproj

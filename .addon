@@ -1,0 +1,16 @@
+{
+  "Title": "Icons-Tool",
+  "Type": "tool",
+  "Org": "local",
+  "Ident": "icons_tool",
+  "Schema": 1,
+  "HasAssets": true,
+  "AssetsPath": "",
+  "ResourcePaths": null,
+  "HasCode": true,
+  "CodePath": "code",
+  "RootNamespace": "Tools",
+  "Metadata": {
+    "ProjectTemplate": null
+  }
+}
