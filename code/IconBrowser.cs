@@ -11,6 +11,9 @@ public class feeffe
 		ListView ListView;
 		ToolButton ViewMode;
 
+		private Settings Settings;
+		private const string SettingsPrefix = "doctor.icons_tool.settings";
+
 		int _viewModeType;
 		public int ViewModeType
 		{
@@ -20,7 +23,7 @@ public class feeffe
 				if ( _viewModeType == value ) return;
 				_viewModeType = value;
 
-				SaveSettings();
+				Settings.Save( "icon_size", _viewModeType );
 				UpdateIconSize( _viewModeType );
 
 				if ( value == 1 ) ViewMode.Icon = "apps";
@@ -31,6 +34,9 @@ public class feeffe
 
 		public IconBrowser( Widget parent ) : base( parent )
 		{
+			// init settings
+			Settings = new( SettingsPrefix );
+
 			SetLayout( LayoutMode.TopToBottom );
 			Layout.Spacing = 0;
 
@@ -65,25 +71,13 @@ public class feeffe
 			ListView.ItemPaint = PaintItem;
 			ListView.ItemSelected = OnItemSelected;
 
-			LoadSettings();
+			ViewModeType = Settings.Load( "icon_size", ViewModeType );
 			UpdateIconSize( ViewModeType );
 		}
 
 		private void OnFilterTextChanged( string filter )
 		{
 			ListView.SetItems( Enum.GetValues<MaterialIcon>().Where( x => string.IsNullOrEmpty( filter ) || x.ToString().Contains( filter, StringComparison.OrdinalIgnoreCase ) ).Select( x => (object)x ) );
-		}
-
-		private const string SettingsPrefix = "doctor.icons_tool.settings";
-
-		private void LoadSettings()
-		{
-			ViewModeType = Cookie.Get<int>( $"{SettingsPrefix}.icon_size", ViewModeType );
-		}
-
-		private void SaveSettings()
-		{
-			Cookie.Set<int>( $"{SettingsPrefix}.icon_size", ViewModeType );
 		}
 
 		private void UpdateIconSize( int i )
@@ -145,6 +139,12 @@ public class feeffe
 			if ( Paint.HasSelected ) alpha = 1.0f;
 
 			var name = MaterialIconUtility.Lookup( icon );
+
+			if ( Paint.HasMouseOver )
+			{
+				Paint.SetPen( Theme.White );
+				Paint.DrawRect( item.Rect );
+			}
 
 			Paint.SetPen( Theme.White.WithAlpha( alpha ) );
 			Paint.DrawIcon( item.Rect, $"{name}", item.Rect.height - 4 );
