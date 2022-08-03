@@ -134,19 +134,34 @@ public class feeffe
 		{
 			if ( item.Object is not MaterialIcon icon ) return;
 
-			var alpha = 0.5f;
-			if ( Paint.HasMouseOver ) alpha = 0.7f;
-			if ( Paint.HasSelected ) alpha = 1.0f;
-
 			var name = MaterialIconUtility.Lookup( icon );
 
-			if ( Paint.HasMouseOver )
+			if ( Paint.HasSelected || Paint.HasPressed )
 			{
+				Paint.SetPen( Paint.HasPressed ? Theme.Green : Theme.Primary, 2, PenStyle.Dash );
+				Paint.ClearBrush();
+				Paint.DrawRect( item.Rect.Contract( 1 ), 3 );
+
+				Paint.ClearPen();
+				Paint.SetBrush( Paint.HasPressed ? Theme.Green.WithAlpha( 0.4f ) : Theme.Primary.WithAlpha( 0.4f ) );
+				Paint.DrawRect( item.Rect.Contract( 0 ), 3 );
+
 				Paint.SetPen( Theme.White );
-				Paint.DrawRect( item.Rect );
+			}
+			else if ( Paint.HasMouseOver )
+			{
+				Paint.ClearPen();
+				Paint.SetBrush( Theme.Blue.Darken( 0.7f ).Desaturate( 0.3f ).WithAlpha( 0.5f ) );
+				Paint.DrawRect( item.Rect.Expand( -2.0f ) );
+				Paint.SetPen( Theme.White );
+			}
+			else
+			{
+				Paint.SetPen( Theme.White.WithAlpha( 0.7f ) );
 			}
 
-			Paint.SetPen( Theme.White.WithAlpha( alpha ) );
+			// draw icon
+			Paint.SetPen( Theme.White.WithAlpha( 0.5f ) );
 			Paint.DrawIcon( item.Rect, $"{name}", item.Rect.height - 4 );
 		}
 	}
