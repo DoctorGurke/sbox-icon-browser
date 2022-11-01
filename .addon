@@ -3,6 +3,7 @@
   "Type": "tool",
   "Org": "local",
   "Ident": "icons_tool",
+  "Tags": "",
   "Schema": 1,
   "HasAssets": true,
   "AssetsPath": "",
@@ -11,6 +12,12 @@
   "CodePath": "code",
   "RootNamespace": "Tools",
   "Metadata": {
-    "ProjectTemplate": null
+    "ProjectTemplate": null,
+    "Compiler": {
+      "RootNamespace": "IconBrowserTool",
+      "DefineConstants": "SANDBOX;ADDON;DEBUG",
+      "NoWarn": "1701;1702;1591;",
+      "Nullables": true
+    }
   }
 }

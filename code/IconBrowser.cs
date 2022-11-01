@@ -1,168 +1,169 @@
-﻿using Sandbox;
-using System;
-using System.Linq;
-using Tools;
+﻿global using Sandbox;
+global using System;
+global using System.Collections.Generic;
+global using System.Linq;
+global using Tools;
 
-public class feeffe
+namespace IconBrowserTool;
+
+[Dock( "Editor", "Icon Browser", "control_point" )]
+public class IconBrowser : Widget
 {
-	[Dock( "Editor", "Icon Browser", "control_point" )]
-	public class IconBrowser : Widget
+	ListView ListView;
+	ToolButton ViewMode;
+
+	private Settings Settings;
+	private const string SettingsPrefix = "doctor.icons_tool.settings";
+
+	int _viewModeType;
+	public int ViewModeType
 	{
-		ListView ListView;
-		ToolButton ViewMode;
-
-		private Settings Settings;
-		private const string SettingsPrefix = "doctor.icons_tool.settings";
-
-		int _viewModeType;
-		public int ViewModeType
+		get => _viewModeType;
+		set
 		{
-			get => _viewModeType;
-			set
-			{
-				if ( _viewModeType == value ) return;
-				_viewModeType = value;
+			if ( _viewModeType == value ) return;
+			_viewModeType = value;
 
-				Settings.Save( "icon_size", _viewModeType );
-				UpdateIconSize( _viewModeType );
+			Settings.Save( "icon_size", _viewModeType );
+			UpdateIconSize( _viewModeType );
 
-				if ( value == 1 ) ViewMode.Icon = "apps";
-				if ( value == 2 ) ViewMode.Icon = "grid_on";
-				if ( value == 3 ) ViewMode.Icon = "grid_view";
-			}
+			if ( value == 1 ) ViewMode.Icon = "apps";
+			if ( value == 2 ) ViewMode.Icon = "grid_on";
+			if ( value == 3 ) ViewMode.Icon = "grid_view";
 		}
+	}
 
-		public IconBrowser( Widget parent ) : base( parent )
+	public IconBrowser( Widget parent ) : base( parent )
+	{
+		// init settings
+		Settings = new( SettingsPrefix );
+
+		SetLayout( LayoutMode.TopToBottom );
+		Layout.Spacing = 0;
+
+		var top = Layout.AddRow();
+
+		var tb = top.Add( new ToolBar( this ) );
+
+		var filter = new LineEdit();
+		filter.PlaceholderText = "Filter..";
+		filter.TextChanged += OnFilterTextChanged;
+		tb.AddWidget( filter );
+
+		ViewMode = top.Add( new ToolButton( "Icon Size", "grid_on", this ) );
+		ViewMode.MouseLeftPress = () =>
 		{
-			// init settings
-			Settings = new( SettingsPrefix );
+			var menu = new Menu( this );
 
-			SetLayout( LayoutMode.TopToBottom );
-			Layout.Spacing = 0;
+			menu.AddOption( "Small Icons", "apps", () => ViewModeType = 1 );
+			menu.AddOption( "Medium Icons", "grid_on", () => ViewModeType = 2 );
+			menu.AddOption( "Large Icons", "grid_view", () => ViewModeType = 3 );
 
-			var top = Layout.AddRow();
+			menu.OpenAt( ViewMode.ScreenRect.BottomLeft, false );
+		};
 
-			var tb = top.Add( new ToolBar( this ) );
+		ListView = new ListView( this );
 
-			var filter = new LineEdit();
-			filter.PlaceholderText = "Filter..";
-			filter.TextChanged += OnFilterTextChanged;
-			tb.AddWidget( filter );
+		Layout.Add( ListView, 1 );
 
-			ViewMode = top.Add( new ToolButton( "Icon Size", "grid_on", this ) );
-			ViewMode.MouseLeftPress = () =>
-			{
-				var menu = new Menu( this );
+		var icons = Enum.GetValues<MaterialIcon>();
 
-				menu.AddOption( "Small Icons", "apps", () => ViewModeType = 1 );
-				menu.AddOption( "Medium Icons", "grid_on", () => ViewModeType = 2 );
-				menu.AddOption( "Large Icons", "grid_view", () => ViewModeType = 3 );
+		ListView.SetItems( icons.Select( x => (object)x ) );
+		ListView.ItemPaint = PaintItem;
+		ListView.ItemSelected = OnItemSelected;
 
-				menu.OpenAt( ViewMode.ScreenRect.BottomLeft, false );
-			};
+		ViewModeType = Settings.Load( "icon_size", ViewModeType );
+		UpdateIconSize( ViewModeType );
+	}
 
-			ListView = new ListView( this );
+	private void OnFilterTextChanged( string filter )
+	{
+		ListView.SetItems( Enum.GetValues<MaterialIcon>().Where( x => string.IsNullOrEmpty( filter ) || x.ToString().Contains( filter, StringComparison.OrdinalIgnoreCase ) ).Select( x => (object)x ) );
+	}
 
-			Layout.Add( ListView, 1 );
-
-			var icons = Enum.GetValues<MaterialIcon>();
-
-			ListView.SetItems( icons.Select( x => (object)x ) );
-			ListView.ItemPaint = PaintItem;
-			ListView.ItemSelected = OnItemSelected;
-
-			ViewModeType = Settings.Load( "icon_size", ViewModeType );
-			UpdateIconSize( ViewModeType );
-		}
-
-		private void OnFilterTextChanged( string filter )
+	private void UpdateIconSize( int i )
+	{
+		// quick maffs
+		var size = i switch
 		{
-			ListView.SetItems( Enum.GetValues<MaterialIcon>().Where( x => string.IsNullOrEmpty( filter ) || x.ToString().Contains( filter, StringComparison.OrdinalIgnoreCase ) ).Select( x => (object)x ) );
-		}
+			1 => 32,
+			2 => 64,
+			3 => 128,
+			_ => 64
+		};
 
-		private void UpdateIconSize( int i )
+		ListView.ItemSize = size;
+	}
+
+	private object? _last;
+	private object? _copy;
+	private RealTimeSince _delay;
+
+	private void OnItemSelected( object obj )
+	{
+		if ( obj is not MaterialIcon icon ) return;
+
+		var name = MaterialIconUtility.Lookup( icon );
+
+		// only tell us the icon if we hadn't had it selected last
+		if ( _last != obj )
 		{
-			var size = i switch
-			{
-				1 => 32,
-				2 => 64,
-				3 => 128,
-				_ => 64
-			};
-
-			ListView.ItemSize = size;
-		}
-
-		private object _last;
-		private object _copy;
-		private RealTimeSince _delay;
-
-		private void OnItemSelected( object obj )
-		{
-			if ( obj is not MaterialIcon icon ) return;
-
-			var name = MaterialIconUtility.Lookup( icon );
-
-			// only tell us the icon if we hadn't had it selected last
-			if ( _last != obj )
-			{
-				Log.Info( $"{obj} \"{name}\"" );
-				_last = obj;
-				_delay = 0;
-				return;
-			}
-
-			// double click check
-			if ( _delay > 0.5f )
-			{
-				_delay = 0;
-				return;
-			}
-
-			// only copy this item once, any more double clicks should not do anything
-			if ( _copy != _last )
-			{
-				Log.Info( $"\"{name}\" copied to clipboard." );
-				Clipboard.Copy( $"{name}" );
-				_copy = obj;
-			}
-
+			Log.Info( $"{obj} \"{name}\"" );
+			_last = obj;
 			_delay = 0;
+			return;
 		}
 
-		private void PaintItem( VirtualWidget item )
+		// double click check
+		if ( _delay > 0.5f )
 		{
-			if ( item.Object is not MaterialIcon icon ) return;
-
-			var name = MaterialIconUtility.Lookup( icon );
-
-			if ( Paint.HasSelected || Paint.HasPressed )
-			{
-				Paint.SetPen( Paint.HasPressed ? Theme.Green : Theme.Primary, 2, PenStyle.Dash );
-				Paint.ClearBrush();
-				Paint.DrawRect( item.Rect.Contract( 1 ), 3 );
-
-				Paint.ClearPen();
-				Paint.SetBrush( Paint.HasPressed ? Theme.Green.WithAlpha( 0.4f ) : Theme.Primary.WithAlpha( 0.4f ) );
-				Paint.DrawRect( item.Rect.Contract( 0 ), 3 );
-
-				Paint.SetPen( Theme.White );
-			}
-			else if ( Paint.HasMouseOver )
-			{
-				Paint.ClearPen();
-				Paint.SetBrush( Theme.Blue.Darken( 0.7f ).Desaturate( 0.3f ).WithAlpha( 0.5f ) );
-				Paint.DrawRect( item.Rect.Expand( -2.0f ) );
-				Paint.SetPen( Theme.White );
-			}
-			else
-			{
-				Paint.SetPen( Theme.White.WithAlpha( 0.7f ) );
-			}
-
-			// draw icon
-			Paint.SetPen( Theme.White.WithAlpha( 0.5f ) );
-			Paint.DrawIcon( item.Rect, $"{name}", item.Rect.height - 4 );
+			_delay = 0;
+			return;
 		}
+
+		// only copy this item once, any more double clicks should not do anything
+		if ( _copy != _last )
+		{
+			Log.Info( $"\"{name}\" copied to clipboard." );
+			Clipboard.Copy( $"{name}" );
+			_copy = obj;
+		}
+
+		_delay = 0;
+	}
+
+	private void PaintItem( VirtualWidget item )
+	{
+		if ( item.Object is not MaterialIcon icon ) return;
+
+		var name = MaterialIconUtility.Lookup( icon );
+
+		if ( Paint.HasSelected || Paint.HasPressed )
+		{
+			Paint.SetPen( Paint.HasPressed ? Theme.Green : Theme.Primary, 2, PenStyle.Dash );
+			Paint.ClearBrush();
+			Paint.DrawRect( item.Rect.Shrink( 1 ), 3 );
+
+			Paint.ClearPen();
+			Paint.SetBrush( Paint.HasPressed ? Theme.Green.WithAlpha( 0.4f ) : Theme.Primary.WithAlpha( 0.4f ) );
+			Paint.DrawRect( item.Rect.Shrink( 0 ), 3 );
+
+			Paint.SetPen( Theme.White );
+		}
+		else if ( Paint.HasMouseOver )
+		{
+			Paint.ClearPen();
+			Paint.SetBrush( Theme.Blue.Darken( 0.7f ).Desaturate( 0.3f ).WithAlpha( 0.5f ) );
+			Paint.DrawRect( item.Rect.Grow( -2.0f ) );
+			Paint.SetPen( Theme.White );
+		}
+		else
+		{
+			Paint.SetPen( Theme.White.WithAlpha( 0.7f ) );
+		}
+
+		// draw icon
+		Paint.SetPen( Theme.White.WithAlpha( 0.5f ) );
+		Paint.DrawIcon( item.Rect, $"{name}", item.Rect.Height - 4 );
 	}
 }
