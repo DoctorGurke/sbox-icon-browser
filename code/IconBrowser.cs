@@ -38,7 +38,7 @@ public class IconBrowser : Widget
 		// init settings
 		Settings = new( SettingsPrefix );
 
-		SetLayout( LayoutMode.TopToBottom );
+		Layout = Layout.Column();
 		Layout.Spacing = 0;
 
 		var top = Layout.AddRow();
@@ -125,7 +125,7 @@ public class IconBrowser : Widget
 		if ( _copy != _last )
 		{
 			Log.Info( $"\"{name}\" copied to clipboard." );
-			Clipboard.Copy( $"{name}" );
+			EditorUtility.Clipboard.Copy( name );
 			_copy = obj;
 		}
 
