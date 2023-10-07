@@ -125,7 +125,7 @@ public class IconBrowser : Widget
 		if ( _copy != _last )
 		{
 			Log.Info( $"\"{name}\" copied to clipboard." );
-			Sandbox.UI.Clipboard.SetText( name );
+			EditorUtility.Clipboard.Copy( name );
 			_copy = obj;
 		}
 
